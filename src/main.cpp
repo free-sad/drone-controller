@@ -7,6 +7,8 @@
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 
+int sign(int x);
+
 MDNSResponder mdns;
 WebSocketsServer ws = WebSocketsServer(81);
 
@@ -30,6 +32,9 @@ Vec3 vel = {0, 0, 0};
 Vec3 accel = {0, 0, 0};
 
 time_t startTime = 0;
+
+bool governor = false; //if true, limit speed
+int speedLimit = 40;
 
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -57,11 +62,14 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       int y = controllerInput["y"];
       int z = controllerInput["z"];
 
+      JsonObject state = doc["state"];
+      governor = state["governor"];
+
       accel.x = x;
       accel.y = y;
       accel.z = z;
 
-      Serial.printf("x: %d, y: %d, z: %d", x, y, z);
+      Serial.printf("x: %d, y: %d, z: %d, gov: %d\n", x, y, z, governor);
 
       break;
   }
@@ -108,53 +116,103 @@ void setup() {
 
 void loop() {
 
-  if(millis() - startTime > 100) {
-    vel.x += accel.x;
-    vel.y += accel.y;
-    vel.z += accel.z;
+  if(millis() - startTime > 100) { //velocity update loop
+    if(governor) { //speed limiting enabled
+      //x axis
+      if(accel.x != 0) {
+        //only accelerate if less than speed limit
+        if(abs(vel.x + accel.x) < speedLimit) {
+          vel.x += accel.x;
+        }
+      } else {
+        //slow down if no input
+        if(abs(vel.x) > 0) {
+          vel.x += -sign(vel.x);
+        }
+      }
+
+      //y axis
+      if(accel.y != 0) {
+        //only accelerate if less than speed limit
+        if(abs(vel.y + accel.y) < speedLimit) {
+          vel.y += accel.y;
+        }
+      } else {
+        //slow down if no input
+        if(abs(vel.y) > 0) {
+          vel.y += -sign(vel.y);
+        }
+      }
+
+      //z axis
+      if(accel.z != 0) {
+        //only accelerate if less than speed limit
+        if(abs(vel.z + accel.z) < speedLimit) {
+          vel.z += accel.z;
+        }
+      } else {
+        //slow down if no input
+        if(abs(vel.z) > 0) {
+          vel.z += -sign(vel.z);
+        }
+      }
+    } else {
+      vel.x += accel.x;
+      vel.y += accel.y;
+      vel.z += accel.z;
+
+      //actuate solenoids
+      //x axis
+      if(accel.x < 0) {
+        digitalWrite(L, HIGH);
+        digitalWrite(R, LOW);
+      } else if(accel.x == 0) {
+        digitalWrite(L, LOW);
+        digitalWrite(R, LOW);
+      } else if(accel.x > 0) {
+        digitalWrite(L, LOW);
+        digitalWrite(R, HIGH);
+      }
+
+      //y axis
+      if(accel.y < 0) {
+        digitalWrite(D, HIGH);
+        digitalWrite(U, LOW);
+      } else if(accel.y == 0) {
+        digitalWrite(D, LOW);
+        digitalWrite(U, LOW);
+      } else if(accel.y > 0) {
+        digitalWrite(D, LOW);
+        digitalWrite(U, HIGH);
+      }
+
+      //z axis
+      if(accel.z < 0) {
+        digitalWrite(F, HIGH);
+        digitalWrite(B, LOW);
+      } else if(accel.z == 0) {
+        digitalWrite(F, LOW);
+        digitalWrite(B, LOW);
+      } else if(accel.z > 0) {
+        digitalWrite(F, LOW);
+        digitalWrite(B, HIGH);
+      }
+    }
 
     startTime = millis();
 
     Serial.printf("velocity: x: %d, y: %d, z: %d\n", vel.x, vel.y, vel.z);
   }
 
-  //actuate solenoids
-  //x axis
-  if(accel.x < 0) {
-    digitalWrite(L, HIGH);
-    digitalWrite(R, LOW);
-  } else if(accel.x == 0) {
-    digitalWrite(L, LOW);
-    digitalWrite(R, LOW);
-  } else if(accel.x > 0) {
-    digitalWrite(L, LOW);
-    digitalWrite(R, HIGH);
-  }
-
-  //y axis
-  if(accel.y < 0) {
-    digitalWrite(D, HIGH);
-    digitalWrite(U, LOW);
-  } else if(accel.y == 0) {
-    digitalWrite(D, LOW);
-    digitalWrite(U, LOW);
-  } else if(accel.y > 0) {
-    digitalWrite(D, LOW);
-    digitalWrite(U, HIGH);
-  }
-
-  //z axis
-  if(accel.z < 0) {
-    digitalWrite(F, HIGH);
-    digitalWrite(B, LOW);
-  } else if(accel.z == 0) {
-    digitalWrite(F, LOW);
-    digitalWrite(B, LOW);
-  } else if(accel.z > 0) {
-    digitalWrite(F, LOW);
-    digitalWrite(B, HIGH);
-  }
-
-
   ws.loop();
+}
+
+int sign(int x) {
+  if(x < 0) {
+    return -1;
+  } else if(x > 0) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
