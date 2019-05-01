@@ -46,7 +46,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       Serial.println("Websocket connected");
       break;
     case WStype_TEXT:
-      Serial.println("raw payload: " + String((char*)payload));
+      //Serial.println("raw payload: " + String((char*)payload));
 
       StaticJsonDocument<500> doc;
 
@@ -69,7 +69,10 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       accel.y = y;
       accel.z = z;
 
-      Serial.printf("x: %d, y: %d, z: %d, gov: %d\n", x, y, z, governor);
+      //Serial.printf("x: %d, y: %d, z: %d, gov: %d\n", x, y, z, governor);
+
+      //send ack
+      ws.sendTXT(num, "ACK");
 
       break;
   }
