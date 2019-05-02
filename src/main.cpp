@@ -34,7 +34,7 @@ Vec3 accel = {0, 0, 0};
 time_t startTime = 0;
 
 bool governor = false; //if true, limit speed
-int speedLimit = 40;
+int speedLimit = 10;
 
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -63,6 +63,12 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       int z = controllerInput["z"];
 
       JsonObject state = doc["state"];
+
+      if(state["governor"] != governor) {
+        vel = {0, 0, 0};
+        governor = state["governor"];
+      }
+
       governor = state["governor"];
 
       accel.x = x;
@@ -97,7 +103,7 @@ void setup() {
   Serial.begin(115200);
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin();
+  WiFi.begin("free-sad", "rocksatx");
 
   Serial.println("Connecting to network");
   while(WiFi.status() != WL_CONNECTED) {
@@ -126,11 +132,34 @@ void loop() {
         //only accelerate if less than speed limit
         if(abs(vel.x + accel.x) < speedLimit) {
           vel.x += accel.x;
+
+          if(accel.x < 0) {
+            digitalWrite(L, HIGH);
+            digitalWrite(R, LOW);
+          } else if(accel.x > 0) {
+            digitalWrite(L, LOW);
+            digitalWrite(R, HIGH);
+          }
+
+        } else {
+          digitalWrite(L, LOW);
+          digitalWrite(R, LOW);
         }
       } else {
+        digitalWrite(L, LOW);
+        digitalWrite(R, LOW);
+
         //slow down if no input
         if(abs(vel.x) > 0) {
           vel.x += -sign(vel.x);
+
+          if(vel.x < 0) {
+            digitalWrite(L, LOW);
+            digitalWrite(R, HIGH);
+          } else if(vel.x > 0) {
+            digitalWrite(L, HIGH);
+            digitalWrite(R, LOW);
+          }
         }
       }
 
@@ -139,11 +168,34 @@ void loop() {
         //only accelerate if less than speed limit
         if(abs(vel.y + accel.y) < speedLimit) {
           vel.y += accel.y;
+
+          if(accel.y < 0) {
+            digitalWrite(D, HIGH);
+            digitalWrite(U, LOW);
+          } else if(accel.y > 0) {
+            digitalWrite(D, LOW);
+            digitalWrite(U, HIGH);
+          }
+
+        } else {
+          digitalWrite(D, LOW);
+          digitalWrite(U, LOW);
         }
       } else {
+        digitalWrite(D, LOW);
+        digitalWrite(U, LOW);
+
         //slow down if no input
         if(abs(vel.y) > 0) {
           vel.y += -sign(vel.y);
+
+          if(vel.y < 0) {
+            digitalWrite(D, LOW);
+            digitalWrite(U, HIGH);
+          } else if(vel.y > 0) {
+            digitalWrite(D, HIGH);
+            digitalWrite(U, LOW);
+          }
         }
       }
 
@@ -152,13 +204,37 @@ void loop() {
         //only accelerate if less than speed limit
         if(abs(vel.z + accel.z) < speedLimit) {
           vel.z += accel.z;
+
+          if(accel.z < 0) {
+            digitalWrite(F, HIGH);
+            digitalWrite(B, LOW);
+          } else if(accel.z > 0) {
+            digitalWrite(F, LOW);
+            digitalWrite(B, HIGH);
+          }
+
+        } else {
+          digitalWrite(F, LOW);
+          digitalWrite(B, LOW);
         }
       } else {
+        digitalWrite(F, LOW);
+        digitalWrite(B, LOW);
+
         //slow down if no input
         if(abs(vel.z) > 0) {
-          vel.z += -sign(vel.z);
+          vel.z+= -sign(vel.z);
+
+          if(vel.z < 0) {
+            digitalWrite(F, LOW);
+            digitalWrite(B, HIGH);
+          } else if(vel.z > 0) {
+            digitalWrite(F, HIGH);
+            digitalWrite(B, LOW);
+          }
         }
       }
+
     } else {
       vel.x += accel.x;
       vel.y += accel.y;
