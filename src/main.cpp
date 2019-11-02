@@ -16,10 +16,10 @@ WebSocketsServer ws = WebSocketsServer(81);
 //Axes: (axis: neg_dir/pos_dir) x: L/R, y: D/U, z: F/B
 #define D 13 //D7
 #define U 12 //D6
-#define R 14 //D5
-#define L 0  //D3
-#define B 4  //D2
-#define F 5  //D1
+#define L 14 //D5
+#define R 0  //D3
+#define F 4  //D2
+#define B 5  //D1
 
 typedef struct Vec3 {
   int x;

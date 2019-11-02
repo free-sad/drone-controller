@@ -1,3 +1,7 @@
+.pio/
+.clang*
+.gcc-flags.json
+
 .pioenvs/
 
 # Prerequisites
